@@ -1,11 +1,13 @@
-import pandas as pd 
-import requests 
+#!/usr/bin/env python3
 
-df = pd.read_csv("../experiment-tracking/kc_house_data.csv")
+import pandas as pd
+import requests
+
+df = pd.read_csv("kc_house_data.csv")
 
 # choose features
 features = ["bedrooms","bathrooms","sqft_living","sqft_above","grade",
-            "floors","view",'sqft_lot','floors','waterfront','zipcode'] 
+            "floors","view",'sqft_lot','waterfront','zipcode']
 
 feature_df = df[features]
 row = list(feature_df.loc[7,:])

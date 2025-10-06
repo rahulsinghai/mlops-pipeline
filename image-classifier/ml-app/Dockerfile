@@ -8,7 +8,6 @@ apt-get clean && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 # Seldon Core specific
 COPY . /microservice
 WORKDIR /microservice
-COPY ./requirements.txt /microservice
 RUN curl -s https://bootstrap.pypa.io/get-pip.py -o get-pip.py && python3 get-pip.py && rm -f get-pip.py
 RUN pip3 install --no-cache -r requirements.txt
 

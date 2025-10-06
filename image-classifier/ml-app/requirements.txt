@@ -1,2 +1,2 @@
-scikit-learn
 seldon-core
+Pillow

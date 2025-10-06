@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import base64
-import json
 import logging
-import os
 import numpy as np
 import requests
 import sys
 
 from PIL import Image
 
-logger = logging.getLogger('__mymodelclient__')
+logger = logging.getLogger('__imageclassifiermodelclient__')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 

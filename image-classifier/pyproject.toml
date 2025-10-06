@@ -1,10 +1,9 @@
 [project]
-name = "mlops-pipeline"
+name = "image-classifier"
 version = "0.1.0"
-description = "A sample MLOps pipeline project"
+description = "A sample image classifier MLOps pipeline project"
 requires-python = "~=3.12.11"
 dependencies = [
-    "pandas~=2.3.3",
-    "scikit-learn~=1.7.2",
+    "Pillow~=11.3.0",
     "seldon-core~=1.18.2",
 ]

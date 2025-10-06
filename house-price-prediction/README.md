@@ -18,6 +18,16 @@ None of this is fit for production as outlined, but many of the principles and t
 You’ll really only need Docker Desktop to follow along.
 This will enable you to run Kubernetes. However, you should also clone this [repo](https://github.com/rahulsinghai/mlops-pipeline), as it has all of the additional scripts we’ll need.
 
+## Serving Machine Learning Models with Seldon Core
+Currently, Seldon Core supports a multitude of languages including Python, R, Java, NodeJS, and now Go (alpha).
+The fundamental unit of execution in any **k8s cluster** is a **Pod**, which is always backed by one or more Docker containers.
+
+Seldon Core has you first implement your model code under their **prediction API** and then wrap it within a Docker container.
+
+The image you create can either be built via a _Dockerfile_ directly or using _OpenShift’s s2i_ tool with Seldon Core’s wrapper images as a base.
+
+For our simple Python based service example, we will create it directly using a few simple Dockerfile directives.
+
 ```shell
 brew update
 brew install pyenv
@@ -63,7 +73,7 @@ While it does offer a lot more than simple tracking functions, we’ll be focusi
 
 First, create a new folder in the mlops-pipeline repo for the storage of our data.
 
-`mkdir -p ./experiment-tracking/buckets/mlflow`
+`mkdir -p ./house-price-prediction/experiment-tracking/buckets/mlflow`
 
 Then, you can use the docker-compose file in `experiment-tracking` to start our required services.
 Note: sql volumes were omitted due to a hacky workaround for [this error](https://github.com/docker-library/mysql/issues/275).
@@ -71,7 +81,7 @@ Note: sql volumes were omitted due to a hacky workaround for [this error](https:
 We provide the environment variables in a `.env` file and build with
 
 ```shell
-cd ./experiment-tracking/
+cd house-price-prediction/experiment-tracking
 cp .env.example .env
 docker-compose --env-file ./.env down
 docker-compose --env-file ./.env up --build -d
@@ -141,8 +151,8 @@ brew install minio-mc # macOS
 mc alias set local http://localhost:9000 minio minio123
 
 mc ls local/mlflow/1/models/<HASH>/artifacts/
-mc ls local/mlflow/1/models/m-83711eafd5a64eff93dadb5c0982d849/artifacts/
-mc cp local/mlflow/1/models/m-83711eafd5a64eff93dadb5c0982d849/artifacts/model.pkl ./ml-app/model.pkl
+mc ls local/mlflow/1/models/m-80f1074e719c49f98d3e205536197415/artifacts/
+mc cp local/mlflow/1/models/m-80f1074e719c49f98d3e205536197415/artifacts/model.pkl ./ml-app/model.pkl
 ```
 
 After you have `ml-app/model.pkl`, continue below.
@@ -171,13 +181,14 @@ docker run -d --rm --name house-price-model-seldon-app -p 9002:9000 -p 5001:5000
 
 # Check it is running
 docker ps --filter name=house-price-model-seldon-app
-docker logs --tail 40 house-price-model-seldon-app
 
 # View logs (helpful for debugging startup issues):
+docker logs --tail 40 house-price-model-seldon-app
 docker logs -f house-price-model-seldon-app
 
 # (Optional) Exec into the container (use /bin/sh if /bin/bash is not present):
 docker exec -it house-price-model-seldon-app /bin/bash
+exit
 ```
 
 This should start the server locally and make it reachable at port 5001.

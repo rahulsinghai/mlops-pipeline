@@ -1,0 +1,23 @@
+apiVersion: machinelearning.seldon.io/v1alpha2
+kind: SeldonDeployment
+metadata:
+  name: image-classifier-model
+spec:
+  name: image-classifier-deployment
+  predictors:
+    - componentSpecs:
+        - spec:
+            containers:
+              - name: image-classifier-model-graph
+                image: <your cluster's registry>/image-classifier-model:0.1
+      graph:
+        children: []
+        endpoint:
+          type: REST
+        name: classifier
+        type: MODEL
+      annotations:
+        predictor_version: "0.1"
+        seldon.io/svc-name: image-classifier-model-svc
+      name: image-classifier-graph
+      replicas: 1
