@@ -17,7 +17,8 @@ mlflow.set_tracking_uri("http://localhost:5000")
 mlflow.set_experiment("rsinghai-test")
 
 # Enable MLflow's automatic experiment tracking for scikit-learn
-mlflow.sklearn.autolog()
+# mlflow.sklearn.autolog()
+# Manual MLflow tracking (autolog disabled to avoid duplicate runs)
 
 # King County House Sales dataset (kc_house_data.csv), which contains real estate data from King County, Washington (where Seattle is located).
 df = pd.read_csv("kc_house_data.csv") 
@@ -34,29 +35,32 @@ y = df["price"] # target variable - price - The sale price of the house (what yo
 # Random State: 3 (for reproducibility)
 x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.7, random_state=3)
 
-# choose model with settings
-# Algorithm: Random Forest with 100 decision trees (n_estimators=100)
-model = RandomForestRegressor(n_estimators=100, max_depth=6, max_features=10)
+# Start MLflow run in a context, This ensures all logging happens within a single run
+with mlflow.start_run():
+    # choose model with settings
+    # Algorithm: Random Forest with 100 decision trees (n_estimators=100)
+    model = RandomForestRegressor(n_estimators=100, max_depth=6, max_features=10)
 
-# MLflow triggers logging automatically upon model fitting
-model.fit(x_train, y_train)
+    # Train the model
+    # MLflow triggers logging automatically upon model fitting
+    model.fit(x_train, y_train)
 
-# Performance Metrics: R² score for both training and test datasets
-metrics = {"train_score": model.score(x_train, y_train), "test_score": model.score(x_test, y_test)}
-print(metrics)
+    # Performance Metrics: R² score for both training and test datasets
+    metrics = {"train_score": model.score(x_train, y_train), "test_score": model.score(x_test, y_test)}
+    print(metrics)
 
-# MLflow Tracking
-# Create proper input example and infer signature
-input_example = x_test.iloc[0:5]  # Use a few rows for better example
-predictions = model.predict(input_example)
-signature = infer_signature(input_example, predictions)
+    # MLflow Tracking
+    # Create proper input example and infer signature
+    input_example = x_test.iloc[0:5]  # Use a few rows for better example
+    predictions = model.predict(input_example)
+    signature = infer_signature(input_example, predictions)
 
-# Log model, params, and metrics to MLflow
-mlflow.sklearn.log_model(
-    model,
-    name="rf-regressor",
-    signature=signature,
-    input_example=input_example
-)
-mlflow.log_params({"n_estimators":100}) # log params to mlflow and artifacts to minio
-mlflow.log_metrics(metrics) # Performance metrics (train_score and test_score - R² scores)
+    # Log model, params, and metrics to MLflow
+    mlflow.sklearn.log_model(
+        model,
+        name="rf-regressor",
+        signature=signature,
+        input_example=input_example
+    )
+    mlflow.log_params({"n_estimators": 100, "max_depth": 6, "max_features": 10})  # log all params
+    mlflow.log_metrics(metrics)  # Performance metrics (train_score and test_score - R² scores)

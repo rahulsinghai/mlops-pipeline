@@ -1,4 +1,4 @@
-# A Simple MLOps Pipeline on Your Local Machine
+# Simple MLOps Pipeline on Your Local Machine
 
 Docker Desktop, Kubernetes and Other Open Source Tooling to Demonstrate Machine Learning Process on your Laptop
 Article Link: <https://medium.com/data-science/a-simple-mlops-pipeline-on-your-local-machine-db9326addf31>
@@ -16,9 +16,10 @@ Some of technologies used will be:
 
 None of this is fit for production as outlined, but many of the principles and technologies are widely applicable.
 You’ll really only need Docker Desktop to follow along.
-This will enable you to run Kubernetes. However, you should also clone this [repo](https://github.com/rahulsinghai/mlops-pipeline), as it has all of the additional scripts we’ll need.
+This will enable you to run Kubernetes. However, you should also clone this cuurrent [repo](https://github.com/rahulsinghai/mlops-pipeline), as it has all of the additional scripts we’ll need.
 
 ## Serving Machine Learning Models with Seldon Core
+
 Currently, Seldon Core supports a multitude of languages including Python, R, Java, NodeJS, and now Go (alpha).
 The fundamental unit of execution in any **k8s cluster** is a **Pod**, which is always backed by one or more Docker containers.
 
@@ -27,35 +28,6 @@ Seldon Core has you first implement your model code under their **prediction API
 The image you create can either be built via a _Dockerfile_ directly or using _OpenShift’s s2i_ tool with Seldon Core’s wrapper images as a base.
 
 For our simple Python based service example, we will create it directly using a few simple Dockerfile directives.
-
-```shell
-brew update
-brew install pyenv
-brew install uv
-
-pyenv versions
-pyenv install -l | less
-pyenv install 3.12.11
-pyenv global 3.12.11
-python --version
-pip install --upgrade pip
-pip install virtualenv
-pip install uv
-uv --version
-
-uv python set 3.12.11
-
-# Initiate a new project
-uv init
-# Create a virtual environment
-uv venv
-source .venv/bin/activate
-
-uv sync
-
-cd ml-app
-pip install -r requirements.txt
-```
 
 ## Experiment Management with Mlflow and Minio
 
@@ -73,10 +45,15 @@ While it does offer a lot more than simple tracking functions, we’ll be focusi
 
 First, create a new folder in the mlops-pipeline repo for the storage of our data.
 
-`mkdir -p ./house-price-prediction/experiment-tracking/buckets/mlflow`
+```shell
+# Clean up the local buckets directory (which contains MinIO data), you can run:
+rm -fr ./house-price-prediction/experiment-tracking/buckets
+mkdir -p ./house-price-prediction/experiment-tracking/buckets/mlflow
+```
 
 Then, you can use the docker-compose file in `experiment-tracking` to start our required services.
-Note: sql volumes were omitted due to a hacky workaround for [this error](https://github.com/docker-library/mysql/issues/275).
+
+**Note**: sql volumes were omitted due to a hacky workaround for [this error](https://github.com/docker-library/mysql/issues/275).
 
 We provide the environment variables in a `.env` file and build with
 
@@ -84,6 +61,10 @@ We provide the environment variables in a `.env` file and build with
 cd house-price-prediction/experiment-tracking
 cp .env.example .env
 docker-compose --env-file ./.env down
+# Remove volumes as well, if you want all experiments purged in mlflow
+docker-compose down -v
+
+# Spin up minio, mlflow postgres, mlflow server containers
 docker-compose --env-file ./.env up --build -d
 ```
 
@@ -97,12 +78,14 @@ These three services are now running inside a docker network, but Mlflow and min
 - Minio: <http://localhost:9001>
 
 Now we can log metrics and models to the file storage using Mlflow. Since minio is available as “S3” inside our docker network, this is easiest to run from the container.
-Running the code below in a terminal will start a session in the mlflow_server container. You can check which other containers are running with docker ps.
+
+Running the code below in a terminal will start a session in the **mlflow_server** container. You can check which other containers are running with `docker ps`.
 Now that we’re inside the container, we have access to the files within. If you’re using the GitHub repo, the following training script should already be available in the container.
 
 ```shell
 docker exec -it mlflow_server bash
 cat /training/train.py
+exit
 ```
 
 Pretty low-effort Python, but this is a quick and easy way to make sure that things are working.
@@ -151,8 +134,8 @@ brew install minio-mc # macOS
 mc alias set local http://localhost:9000 minio minio123
 
 mc ls local/mlflow/1/models/<HASH>/artifacts/
-mc ls local/mlflow/1/models/m-80f1074e719c49f98d3e205536197415/artifacts/
-mc cp local/mlflow/1/models/m-80f1074e719c49f98d3e205536197415/artifacts/model.pkl ./ml-app/model.pkl
+mc ls local/mlflow/1/models/m-80c65239cbf6431ca114ebe684ffac8c/artifacts/
+mc cp local/mlflow/1/models/m-80c65239cbf6431ca114ebe684ffac8c/artifacts/model.pkl ./ml-app/model.pkl
 ```
 
 After you have `ml-app/model.pkl`, continue below.
@@ -196,7 +179,7 @@ You can send a curl request, but it’s probably easier to run `python tests.py`
 It’s a short script I made to grab a dataframe row and send it over HTTP to our service for a prediction.
 
 Quick endpoint probe (REST):
-```bash
+```shell
 curl -i http://localhost:5001/predict || true
 ```
 
@@ -206,23 +189,53 @@ Run tests (auto-detects ports 9000, 5001, 5000):
 Python test script (from repo root or inside `ml-app/`):
 
 ```shell
+brew update
+brew install pyenv
+brew install uv
+
+pyenv versions
+pyenv install -l | less
+pyenv install 3.12.11
+pyenv global 3.12.11
+python --version
+pip install --upgrade pip
+pip install virtualenv
+pip install uv
+uv --version
+
+uv python set 3.12.11
+
+cd house-price-prediction
+# Initiate a new project
+# uv init
+
+# Create a virtual environment
+uv venv
+source .venv/bin/activate
+
+uv sync
+
+cd ml-app
+pip install -r requirements.txt
+
 python tests.py
 ```
 
 ### Troubleshooting BadStatusLine / Binary Noise
+
 A traceback ending in `BadStatusLine('\x00\x00...')` means you sent an HTTP request to a gRPC (HTTP/2 framed) port.
 Fix by:
-1. Ensuring you mapped and are calling port 9000 for REST (`-p 9000:9000`).
-
-
+1. Ensuring you mapped and are calling port 9000 for REST (`-p 9002:9000`).
 2. Raw curl request (example with a single row—adjust values to a real row from the dataset):
-```shell
-curl -X POST http://localhost:5001/predict \
-  -H 'Content-Type: application/json' \
-  -d '{"data":{"ndarray":[[3,1.5,1340,1340,7,1,0,5650,0,98178]]}}'
-```
+
+  ```shell
+  curl -X POST http://localhost:9002/predict \
+    -H 'Content-Type: application/json' \
+    -d '{"data":{"ndarray":[[3,1.5,1340,1340,7,1,0,5650,0,98178]]}}'
+  ```
 
 Expected style of JSON response (values will differ):
+
 ```json
 {"data":{"names":[],"ndarray":[268788.9666666667]},"meta":{"metrics":[{"key":"mycounter","type":"COUNTER","value":1},{"key":"mygauge","type":"GAUGE","value":100},{"key":"mytimer","type":"TIMER","value":20.2}]}}
 ```
@@ -230,5 +243,3 @@ Expected style of JSON response (values will differ):
 It works! Or at least it should.
 Now, everything in this section really has nothing to do with ops. While our choice of serving framework has an effect on our pipeline, it’s nothing to do with CI/CD.
 We definitely don’t want to run things manually every time we update our code or model, so let’s welcome some automation.
-
-
