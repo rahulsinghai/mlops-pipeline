@@ -179,8 +179,9 @@ You can send a curl request, but it’s probably easier to run `python tests.py`
 It’s a short script I made to grab a dataframe row and send it over HTTP to our service for a prediction.
 
 Quick endpoint probe (REST):
+
 ```shell
-curl -i http://localhost:5001/predict || true
+curl -i http://localhost:9002/predict || true
 ```
 
 If you see an HTTP/1.1 200 with JSON (or at least a different error than a binary blob), port 9000 is correct for REST.
